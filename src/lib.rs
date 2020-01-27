@@ -1,10 +1,10 @@
 mod camera;
 mod components;
 mod systems;
+
 use camera::Camera;
 use components::*;
-use ggez::event::*;
-use ggez::{event::EventHandler, graphics, Context, GameResult};
+use ggez::{event::*, graphics, Context, GameResult};
 use specs::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -19,9 +19,9 @@ impl Game {
         let mut world = World::new();
 
         world.register::<Renderable>();
-        world.register::<Position>();
         world.register::<Doors>();
         world.register::<Camera>();
+        world.register::<Player>();
 
         let screen = graphics::screen_coordinates(ctx);
         let camera = Camera::new(0., 0., screen.w, screen.h, 1.);
@@ -41,8 +41,8 @@ impl Game {
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
+                pos: Position::new(0., 0.),
             })
-            .with(Position::new(0., 0.))
             //doors should probably be a seperate entity
             .with(Doors {
                 types: HashSet::from_iter(vec![DoorType::Right]),
@@ -52,6 +52,7 @@ impl Game {
 
         let _player = world
             .create_entity()
+            .with(Player)
             .with(Renderable {
                 mesh: graphics::MeshBuilder::new()
                     .rectangle(
@@ -60,8 +61,8 @@ impl Game {
                         graphics::Color::new(0.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
+                pos: Position::new(screen.w / 2. - 15., screen.h / 2. - 15.),
             })
-            .with(Position::new(screen.w/2. - 15., screen.h/2. - 15.))
             .build();
 
         world.insert(camera);
@@ -75,21 +76,12 @@ impl EventHandler for Game {
 
         let mut cam = self.world.write_resource::<Camera>();
         let keycodes: &HashSet<KeyCode> = ggez::input::keyboard::pressed_keys(ctx);
-        let speed = 5.;
+
+        let mut input_system = InputSystem::new(keycodes);
+        input_system.run_now(&self.world);
+        // let speed = 5.;
 
         // for key in keycodes.iter().cloned() {
-        //     if key == KeyCode::Left {
-        //         cam.x -= speed;
-        //     }
-        //     if key == KeyCode::Up {
-        //         cam.y -= speed;
-        //     }
-        //     if key == KeyCode::Right {
-        //         cam.x += speed;
-        //     }
-        //     if key == KeyCode::Down {
-        //         cam.y += speed;
-        //     }
         //     if key == KeyCode::Equals {
         //         cam.scale.x *= 1.01;
         //         cam.scale.y *= 1.01;
