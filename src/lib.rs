@@ -1,14 +1,14 @@
-mod camera;
 mod components;
+pub use self::components::*;
+mod camera;
+pub use self::camera::Camera;
 mod systems;
+use systems::*;
 
-use camera::Camera;
-use components::*;
 use ggez::{event::*, graphics, Context, GameResult};
 use specs::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use systems::*;
 
 pub struct Game {
     world: World,
@@ -22,6 +22,9 @@ impl Game {
         world.register::<Doors>();
         world.register::<Camera>();
         world.register::<Player>();
+        world.register::<SpecialRoom>();
+        world.register::<IntentToMove>();
+        world.register::<Facing>();
 
         let screen = graphics::screen_coordinates(ctx);
         let camera = Camera::new(0., 0., screen.w, screen.h, 1.);
@@ -37,7 +40,7 @@ impl Game {
                 mesh: graphics::MeshBuilder::new()
                     .rectangle(
                         graphics::DrawMode::fill(),
-                        graphics::Rect::new(0., 0., screen.w, screen.h),
+                        graphics::Rect::new(0., 0., screen.w * 2., screen.h),
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
@@ -61,7 +64,10 @@ impl Game {
                         graphics::Color::new(0.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(screen.w / 2. - 15., screen.h / 2. - 15.),
+                pos: Position::new(screen.w / 2. - 15., screen.h * 0.8 - 15.),
+            })
+            .with(Facing {
+                direction: Direction::Right,
             })
             .build();
 
@@ -71,14 +77,12 @@ impl Game {
 }
 
 impl EventHandler for Game {
-    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
         self.world.maintain();
+        let mut move_system = MoveSystem;
+        move_system.run_now(&self.world);
 
-        let mut cam = self.world.write_resource::<Camera>();
-        let keycodes: &HashSet<KeyCode> = ggez::input::keyboard::pressed_keys(ctx);
-
-        let mut input_system = InputSystem::new(keycodes);
-        input_system.run_now(&self.world);
+        // let mut cam = self.world.write_resource::<Camera>();
         // let speed = 5.;
 
         // for key in keycodes.iter().cloned() {
@@ -143,10 +147,49 @@ impl EventHandler for Game {
     fn key_down_event(
         &mut self,
         _ctx: &mut Context,
-        _keycode: KeyCode,
+        keycode: KeyCode,
         _keymods: KeyMods,
         _repeat: bool,
     ) {
+        if keycode == KeyCode::Right || keycode == KeyCode::Left {
+            let (entities, mut facings, mut int_moves, players): (
+                Entities,
+                WriteStorage<Facing>,
+                WriteStorage<IntentToMove>,
+                ReadStorage<Player>,
+            ) = self.world.system_data();
+
+            if keycode == KeyCode::Right {
+                for (e, _p) in (&entities, &players).join() {
+                    facings
+                        .insert(
+                            e,
+                            Facing {
+                                direction: Direction::Right,
+                            },
+                        )
+                        .expect("Player facing right");
+                    int_moves
+                        .insert(e, IntentToMove)
+                        .expect("Player intent to move right");
+                }
+            }
+            if keycode == KeyCode::Left {
+                for (e, _p) in (&entities, &players).join() {
+                    facings
+                        .insert(
+                            e,
+                            Facing {
+                                direction: Direction::Left,
+                            },
+                        )
+                        .expect("Player facing left");
+                    int_moves
+                        .insert(e, IntentToMove)
+                        .expect("Player intent to move left");
+                }
+            }
+        }
     }
     // A keyboard button was pressed.
 
@@ -155,6 +198,30 @@ impl EventHandler for Game {
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymods: KeyMods) {
         if keycode == KeyCode::Escape {
             quit(ctx);
+        }
+
+        if keycode == KeyCode::Right || keycode == KeyCode::Left {
+            let (entities, facings, mut int_move, players): (
+                Entities,
+                ReadStorage<Facing>,
+                WriteStorage<IntentToMove>,
+                ReadStorage<Player>,
+            ) = self.world.system_data();
+
+            if keycode == KeyCode::Right {
+                for (e, f, _p) in (&entities, &facings, &players).join() {
+                    if int_move.contains(e) && f.direction == Direction::Right {
+                        int_move.remove(e);
+                    }
+                }
+            }
+            if keycode == KeyCode::Left {
+                for (e, f, _p) in (&entities, &facings, &players).join() {
+                    if int_move.contains(e) && f.direction == Direction::Left {
+                        int_move.remove(e);
+                    }
+                }
+            }
         }
     }
     // A keyboard button was released.

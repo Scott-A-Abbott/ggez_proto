@@ -1,10 +1,6 @@
-use crate::camera::Camera;
-use crate::components::*;
-use ggez::event::KeyCode;
-use ggez::nalgebra as na;
-use ggez::*;
-use specs::*;
-use std::collections::HashSet;
+use super::*;
+use ggez::{graphics, nalgebra as na, Context};
+use specs::{Join, Read, ReadStorage, System};
 
 pub struct RenderSystem<'a> {
     ctx: &'a mut Context,
@@ -33,33 +29,26 @@ impl<'a> System<'a> for RenderSystem<'a> {
                     .dest(na::Point2::new(x - x_offset, y - y_offset))
                     .scale(cam.scale),
             )
-            .unwrap();
+            .expect("Drawing a renderable");
         }
     }
 }
 
-pub struct InputSystem<'a> {
-    keycodes: &'a HashSet<KeyCode>,
-}
-impl<'a> InputSystem<'a> {
-    pub fn new(keycodes: &'a HashSet<KeyCode>) -> Self {
-        Self { keycodes }
-    }
-}
-impl<'a> System<'a> for InputSystem<'a> {
-    type SystemData = (ReadStorage<'a, Player>, WriteStorage<'a, Renderable>);
+pub struct MoveSystem;
+impl<'a> System<'a> for MoveSystem {
+    type SystemData = (
+        ReadStorage<'a, Facing>,
+        ReadStorage<'a, IntentToMove>,
+        WriteStorage<'a, Renderable>,
+    );
 
-    fn run(&mut self, (players, mut renderables): Self::SystemData) {
-        for (_p, ren) in (&players, &mut renderables).join() {
-            let speed = 2.5;
-
-            for key in self.keycodes.iter().cloned() {
-                if key == KeyCode::Left {
-                    ren.pos.x -= speed;
-                }
-                if key == KeyCode::Right {
-                    ren.pos.x += speed;
-                }
+    fn run(&mut self, (facings, intentions, mut renderables): Self::SystemData) {
+        for (facing, _move_int, ren) in (&facings, &intentions, &mut renderables).join() {
+            if facing.direction == Direction::Right {
+                ren.pos.x += 2.5;
+            }
+            if facing.direction == Direction::Left {
+                ren.pos.x -= 2.5;
             }
         }
     }

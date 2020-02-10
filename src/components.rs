@@ -1,4 +1,4 @@
-use ggez::{graphics::*, input::keyboard::KeyCode};
+use ggez::graphics::Mesh;
 use specs::*;
 use std::collections::HashSet;
 
@@ -14,11 +14,6 @@ pub enum DoorType {
 pub struct Doors {
     pub types: HashSet<DoorType>,
     pub locations: Vec<Position>,
-}
-
-#[derive(Component)]
-pub struct InputListener {
-    callback: fn(&HashSet<KeyCode>) -> (),
 }
 
 #[derive(Component)]
@@ -53,4 +48,17 @@ impl SpecialRoom {
     pub fn new(label: RoomType) -> Self {
         Self { label }
     }
+}
+
+#[derive(Component)]
+pub struct IntentToMove;
+
+#[derive(PartialEq)]
+pub enum Direction {
+    Right,
+    Left,
+}
+#[derive(Component)]
+pub struct Facing {
+    pub direction: Direction,
 }

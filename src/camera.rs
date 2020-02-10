@@ -37,6 +37,12 @@ impl Camera {
     }
 }
 
+impl Default for Camera {
+    fn default() -> Self {
+        Self::new(0., 0., 800., 600., 1.)
+    }
+}
+
 impl From<Rect> for Camera {
     fn from(rect: Rect) -> Self {
         Self {
@@ -58,12 +64,6 @@ impl From<&Rect> for Camera {
             height: rect.h,
             ..Camera::default()
         }
-    }
-}
-
-impl Default for Camera {
-    fn default() -> Self {
-        Self::new(0., 0., 800., 600., 1.)
     }
 }
 
