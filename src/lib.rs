@@ -77,7 +77,7 @@ impl Game {
 }
 
 impl EventHandler for Game {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
+    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.world.maintain();
         let mut move_system = MoveSystem;
         move_system.run_now(&self.world);
@@ -85,26 +85,74 @@ impl EventHandler for Game {
         // let mut cam = self.world.write_resource::<Camera>();
         // let speed = 5.;
 
-        // for key in keycodes.iter().cloned() {
-        //     if key == KeyCode::Equals {
-        //         cam.scale.x *= 1.01;
-        //         cam.scale.y *= 1.01;
+        let keycodes = ggez::input::keyboard::pressed_keys(ctx);
 
-        //         if cam.scale.x > 2.5 {
-        //             cam.scale.x = 2.5;
-        //             cam.scale.y = 2.5;
-        //         }
-        //     }
-        //     if key == KeyCode::Minus {
-        //         cam.scale.x /= 1.01;
-        //         cam.scale.y /= 1.01;
+        let (entities, mut facings, mut int_moves, players): (
+            Entities,
+            WriteStorage<Facing>,
+            WriteStorage<IntentToMove>,
+            ReadStorage<Player>,
+        ) = self.world.system_data();
 
-        //         if cam.scale.x < 0.25 {
-        //             cam.scale.x = 0.25;
-        //             cam.scale.y = 0.25;
-        //         }
-        //     }
-        // }
+        if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
+            for (e, _p) in (&entities, &players).join() {
+                int_moves.remove(e);
+            }
+        } else {
+            for key in keycodes.iter().cloned() {
+                //     if key == KeyCode::Equals {
+                //         cam.scale.x *= 1.01;
+                //         cam.scale.y *= 1.01;
+
+                //         if cam.scale.x > 2.5 {
+                //             cam.scale.x = 2.5;
+                //             cam.scale.y = 2.5;
+                //         }
+                //     }
+                //     if key == KeyCode::Minus {
+                //         cam.scale.x /= 1.01;
+                //         cam.scale.y /= 1.01;
+
+                //         if cam.scale.x < 0.25 {
+                //             cam.scale.x = 0.25;
+                //             cam.scale.y = 0.25;
+                //         }
+                //     }
+                match key {
+                    KeyCode::Right => {
+                        for (e, _p) in (&entities, &players).join() {
+                            facings
+                                .insert(
+                                    e,
+                                    Facing {
+                                        direction: Direction::Right,
+                                    },
+                                )
+                                .expect("Player facing right");
+                            int_moves
+                                .insert(e, IntentToMove)
+                                .expect("Player intent to move right");
+                        }
+                    }
+                    KeyCode::Left => {
+                        for (e, _p) in (&entities, &players).join() {
+                            facings
+                                .insert(
+                                    e,
+                                    Facing {
+                                        direction: Direction::Left,
+                                    },
+                                )
+                                .expect("Player facing left");
+                            int_moves
+                                .insert(e, IntentToMove)
+                                .expect("Player intent to move left");
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         Ok(())
     }
@@ -147,49 +195,10 @@ impl EventHandler for Game {
     fn key_down_event(
         &mut self,
         _ctx: &mut Context,
-        keycode: KeyCode,
+        _keycode: KeyCode,
         _keymods: KeyMods,
         _repeat: bool,
     ) {
-        if keycode == KeyCode::Right || keycode == KeyCode::Left {
-            let (entities, mut facings, mut int_moves, players): (
-                Entities,
-                WriteStorage<Facing>,
-                WriteStorage<IntentToMove>,
-                ReadStorage<Player>,
-            ) = self.world.system_data();
-
-            if keycode == KeyCode::Right {
-                for (e, _p) in (&entities, &players).join() {
-                    facings
-                        .insert(
-                            e,
-                            Facing {
-                                direction: Direction::Right,
-                            },
-                        )
-                        .expect("Player facing right");
-                    int_moves
-                        .insert(e, IntentToMove)
-                        .expect("Player intent to move right");
-                }
-            }
-            if keycode == KeyCode::Left {
-                for (e, _p) in (&entities, &players).join() {
-                    facings
-                        .insert(
-                            e,
-                            Facing {
-                                direction: Direction::Left,
-                            },
-                        )
-                        .expect("Player facing left");
-                    int_moves
-                        .insert(e, IntentToMove)
-                        .expect("Player intent to move left");
-                }
-            }
-        }
     }
     // A keyboard button was pressed.
 
