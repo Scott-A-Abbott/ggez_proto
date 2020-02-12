@@ -16,6 +16,19 @@ pub struct Doors {
     pub locations: Vec<Position>,
 }
 
+#[derive(PartialEq)]
+pub enum Direction {
+    Right,
+    Left,
+}
+#[derive(Component)]
+pub struct Facing {
+    pub direction: Direction,
+}
+
+#[derive(Component)]
+pub struct IntentToMove;
+
 #[derive(Component)]
 pub struct Player;
 
@@ -48,17 +61,4 @@ impl SpecialRoom {
     pub fn new(label: RoomType) -> Self {
         Self { label }
     }
-}
-
-#[derive(Component)]
-pub struct IntentToMove;
-
-#[derive(PartialEq)]
-pub enum Direction {
-    Right,
-    Left,
-}
-#[derive(Component)]
-pub struct Facing {
-    pub direction: Direction,
 }
