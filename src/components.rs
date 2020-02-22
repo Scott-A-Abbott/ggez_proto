@@ -1,18 +1,16 @@
-use ggez::graphics::Mesh;
 use specs::*;
-use std::collections::HashSet;
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub enum DoorType {
-    Right,
-    Left,
-    Middle,
-    Top,
-    Bottom,
+    Right(Entity),
+    Left(Entity),
+    Middle(Entity),
+    Top(Entity),
+    Bottom(Entity),
 }
 #[derive(Component)]
 pub struct Doors {
-    pub types: HashSet<DoorType>,
+    pub types: std::collections::HashSet<DoorType>,
     pub locations: Vec<Position>,
 }
 
@@ -41,10 +39,26 @@ impl Position {
         Self { x, y }
     }
 }
+impl From<ggez::mint::Point2<f32>> for Position {
+    fn from(point: ggez::mint::Point2<f32>) -> Self {
+        Self {
+            x: point.x,
+            y: point.y,
+        }
+    }
+}
+impl From<Position> for ggez::mint::Point2<f32> {
+    fn from(pos: Position) -> Self {
+        Self { x: pos.x, y: pos.y }
+    }
+}
 
 #[derive(Component)]
-pub struct Renderable {
-    pub mesh: Mesh,
+pub struct Renderable<D>
+where
+    D: ggez::graphics::Drawable + Send + Sync + 'static,
+{
+    pub drawable: D,
     pub pos: Position,
 }
 
@@ -61,4 +75,10 @@ impl SpecialRoom {
     pub fn new(label: RoomType) -> Self {
         Self { label }
     }
+}
+
+#[derive(Component)]
+pub struct Target {
+    entity: Entity,
+    offset: f32,
 }

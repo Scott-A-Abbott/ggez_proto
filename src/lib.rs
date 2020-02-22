@@ -5,7 +5,7 @@ pub use self::camera::Camera;
 mod systems;
 use systems::*;
 
-use ggez::{event::*, graphics, Context, GameResult};
+use ggez::{event::*, graphics, graphics::Mesh, Context, GameResult};
 use specs::*;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -18,7 +18,7 @@ impl Game {
     pub fn new(ctx: &mut ggez::Context) -> GameResult<Game> {
         let mut world = World::new();
 
-        world.register::<Renderable>();
+        world.register::<Renderable<Mesh>>();
         world.register::<Doors>();
         world.register::<Camera>();
         world.register::<Player>();
@@ -27,29 +27,30 @@ impl Game {
         world.register::<Facing>();
 
         let screen = graphics::screen_coordinates(ctx);
-        let camera = Camera::new(0., 0., screen.w, screen.h, 1.);
+        let camera = Camera::new(0.0, 0.0, screen.w, screen.h, 1.0);
 
         let _main_cam = world
             .create_entity()
             .with(Camera::clone_from(&camera))
             .build();
 
+        let next_room = world.create_entity().build();
         let _start_room = world
             .create_entity()
             .with(Renderable {
-                mesh: graphics::MeshBuilder::new()
+                drawable: graphics::MeshBuilder::new()
                     .rectangle(
                         graphics::DrawMode::fill(),
-                        graphics::Rect::new(0., 0., screen.w * 2., screen.h),
+                        graphics::Rect::new(0.0, 0.0, screen.w * 2.0, screen.h),
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(0., 0.),
+                pos: Position::new(0.0, 0.0),
             })
             //doors should probably be a seperate entity
             .with(Doors {
-                types: HashSet::from_iter(vec![DoorType::Right]),
-                locations: vec![Position::new(0., screen.h - 100.)],
+                types: HashSet::from_iter(vec![DoorType::Right(next_room)]),
+                locations: vec![Position::new(0.0, screen.h - 100.0)],
             })
             .build();
 
@@ -57,14 +58,14 @@ impl Game {
             .create_entity()
             .with(Player)
             .with(Renderable {
-                mesh: graphics::MeshBuilder::new()
+                drawable: graphics::MeshBuilder::new()
                     .rectangle(
                         graphics::DrawMode::fill(),
-                        graphics::Rect::new(0., 0., 30., 30.),
+                        graphics::Rect::new(0.0, 0.0, 30.0, 30.0),
                         graphics::Color::new(0.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(screen.w / 2. - 15., screen.h * 0.8 - 15.),
+                pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
             })
             .with(Facing {
                 direction: Direction::Right,
@@ -160,7 +161,7 @@ impl EventHandler for Game {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::WHITE);
 
-        let mut render_system = RenderSystem::new(ctx);
+        let mut render_system = MeshRenderSystem::new(ctx);
         render_system.run_now(&self.world);
 
         graphics::present(ctx)
