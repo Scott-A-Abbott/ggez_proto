@@ -1,18 +1,22 @@
 use specs::*;
+use std::collections::*;
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+pub struct Door {
+    pub to_room: Entity,
+    pub pos: Position,
+}
+
+#[derive(PartialEq, Eq, Hash)]
 pub enum DoorType {
-    Right(Entity),
-    Left(Entity),
-    Middle(Entity),
-    Top(Entity),
-    Bottom(Entity),
+    Right,
+    Left,
+    Middle,
+    Top,
+    Bottom
 }
+
 #[derive(Component)]
-pub struct Doors {
-    pub types: std::collections::HashSet<DoorType>,
-    pub locations: Vec<Position>,
-}
+pub struct Doors(pub HashMap<DoorType, Door>);
 
 #[derive(PartialEq)]
 pub enum Direction {

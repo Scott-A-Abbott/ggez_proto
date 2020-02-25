@@ -7,7 +7,7 @@ use systems::*;
 
 use ggez::{event::*, graphics, graphics::Mesh, Context, GameResult};
 use specs::*;
-use std::collections::HashSet;
+use std::collections::*;
 use std::iter::FromIterator;
 
 pub struct Game {
@@ -35,6 +35,8 @@ impl Game {
             .build();
 
         let next_room = world.create_entity().build();
+        let mut doors = HashMap::new();
+        doors.insert(DoorType::Right, Door{ to_room: next_room, pos: Position::new(0.0, screen.w - 50.0) });
         let _start_room = world
             .create_entity()
             .with(Renderable {
@@ -48,10 +50,7 @@ impl Game {
                 pos: Position::new(0.0, 0.0),
             })
             //doors should probably be a seperate entity
-            .with(Doors {
-                types: HashSet::from_iter(vec![DoorType::Right(next_room)]),
-                locations: vec![Position::new(0.0, screen.h - 100.0)],
-            })
+            .with(Doors(doors))
             .build();
 
         let _player = world
