@@ -87,19 +87,39 @@ impl Game {
     }
 }
 
+pub struct DeltaTime(f32);
+impl Default for DeltaTime {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
+impl std::ops::Mul<&DeltaTime> for f32 {
+    type Output = Self;
+
+    fn mul(self, other: &DeltaTime) -> f32 {
+        let DeltaTime(dt) = other;
+        self * dt
+    }
+}
+
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
-        let mut move_system = MoveSystem;
-        move_system.run_now(&self.entity_manager);
-
-        let mut cam = self.entity_manager.write_resource::<Camera>();
         let speed = 5.0;
+        
+        const DESIRED_FPS: u32 = 60;
+        while timer::check_update_time(ctx, DESIRED_FPS) {
+            let keycodes = ggez::input::keyboard::pressed_keys(ctx);
+            
+            let delta_time = 1.0 / DESIRED_FPS as f32;
+            self.entity_manager.insert(DeltaTime(delta_time));
 
-        let keycodes = ggez::input::keyboard::pressed_keys(ctx);
+            let mut move_system = MoveSystem;
+            move_system.run_now(&self.entity_manager);
 
-        //unofficial camera controlls for testing:
-        for key in keycodes.iter().cloned() {
+            let mut cam = self.entity_manager.write_resource::<Camera>();
+            //unofficial camera controlls for testing:
+            for key in keycodes.iter().cloned() {
             if key == KeyCode::Equals {
                 cam.scale.x *= 1.01;
                 cam.scale.y *= 1.01;
@@ -186,7 +206,8 @@ impl EventHandler for Game {
                 }
             }
         }
-
+        
+    }
         Ok(())
     }
 
@@ -199,7 +220,6 @@ impl EventHandler for Game {
         let fps = timer::fps(ctx);
         let fps_display = Text::new(format!("FPS: {}", fps));
         //When drawing through these calls, `DrawParam` will work as they are documented.
-        let cam = self.entity_manager.fetch::<Camera>();
         graphics::draw(
             ctx,
             &fps_display,
