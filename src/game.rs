@@ -1,9 +1,14 @@
 use super::{
-    Camera,
     components::*,
-    systems::{MoveSystem, MeshRenderSystem},
+    systems::{MeshRenderSystem, MoveSystem},
+    Camera,
 };
-use ggez::{event::{self, KeyCode, EventHandler, MouseButton, KeyMods}, graphics, graphics::{Mesh, Text}, timer, Context, GameResult};
+use ggez::{
+    event::{self, EventHandler, KeyCode, KeyMods, MouseButton},
+    graphics,
+    graphics::{Mesh, Text},
+    timer, Context, GameResult,
+};
 use specs::{Builder, Entities, Join, ReadStorage, RunNow, WorldExt, WriteStorage};
 use std::collections::HashMap;
 
@@ -53,7 +58,7 @@ impl Game {
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(screen.w/2.0 + 20.0, 0.0),
+                pos: Position::new(screen.w / 2.0 + 20.0, 0.0),
             })
             //doors should probably be a seperate entity
             .with(Doors(doors))
@@ -103,11 +108,11 @@ impl std::ops::Mul<&DeltaTime> for f32 {
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
-        
+
         const DESIRED_FPS: u32 = 60;
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let keycodes = ggez::input::keyboard::pressed_keys(ctx);
-            
+
             // let delta_time = 1.0 / DESIRED_FPS as f32;
             // self.entity_manager.insert(DeltaTime(delta_time));
 
@@ -117,100 +122,98 @@ impl EventHandler for Game {
             let mut cam = self.entity_manager.write_resource::<Camera>();
             //unofficial camera controlls for testing:
             for key in keycodes.iter().cloned() {
-            
-            let scale_by = 1.01;
-            let max_clamp = 2.5;
-            let min_clamp = 0.25;
-            if key == KeyCode::Equals {
-                cam.scale.x *= scale_by;
-                cam.scale.y *= scale_by;
+                let scale_by = 1.01;
+                let max_clamp = 2.5;
+                let min_clamp = 0.25;
+                if key == KeyCode::Equals {
+                    cam.scale.x *= scale_by;
+                    cam.scale.y *= scale_by;
 
-                if cam.scale.x > max_clamp {
-                    cam.scale.x = max_clamp;
-                    cam.scale.y = max_clamp;
-                }
-            }
-            if key == KeyCode::Minus {
-                cam.scale.x /= scale_by;
-                cam.scale.y /= scale_by;
-
-                if cam.scale.x < min_clamp {
-                    cam.scale.x = min_clamp;
-                    cam.scale.y = min_clamp;
-                }
-            }
-            if key == KeyCode::Key0 {
-                cam.scale.x = 1.0;
-                cam.scale.y = 1.0;
-                cam.x = 0.0;
-                cam.y = 0.0;
-            }
-
-            let speed = 5.0;
-            if key == KeyCode::A {
-                cam.x -= speed;
-            }
-            if key == KeyCode::D {
-                cam.x += speed;
-            }
-            if key == KeyCode::S {
-                cam.y += speed;
-            }
-            if key == KeyCode::W {
-                cam.y -= speed;
-            }
-        }//end camera controlls
-
-        let (entities, mut facings, mut int_moves, players): (
-            Entities,
-            WriteStorage<Facing>,
-            WriteStorage<IntentToMove>,
-            ReadStorage<Player>,
-        ) = self.entity_manager.system_data();
-
-        if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
-            for (e, _p) in (&entities, &players).join() {
-                int_moves.remove(e);
-            }
-        } else {
-            for key in keycodes.iter().cloned() {
-                match key {
-                    KeyCode::Right => {
-                        for (e, _p) in (&entities, &players).join() {
-                            facings
-                                .insert(
-                                    e,
-                                    Facing {
-                                        direction: Direction::Right,
-                                    },
-                                )
-                                .expect("Player facing right");
-                            int_moves
-                                .insert(e, IntentToMove)
-                                .expect("Player intent to move right");
-                        }
+                    if cam.scale.x > max_clamp {
+                        cam.scale.x = max_clamp;
+                        cam.scale.y = max_clamp;
                     }
-                    KeyCode::Left => {
-                        for (e, _p) in (&entities, &players).join() {
-                            facings
-                                .insert(
-                                    e,
-                                    Facing {
-                                        direction: Direction::Left,
-                                    },
-                                )
-                                .expect("Player facing left");
-                            int_moves
-                                .insert(e, IntentToMove)
-                                .expect("Player intent to move left");
-                        }
+                }
+                if key == KeyCode::Minus {
+                    cam.scale.x /= scale_by;
+                    cam.scale.y /= scale_by;
+
+                    if cam.scale.x < min_clamp {
+                        cam.scale.x = min_clamp;
+                        cam.scale.y = min_clamp;
                     }
-                    _ => {}
+                }
+                if key == KeyCode::Key0 {
+                    cam.scale.x = 1.0;
+                    cam.scale.y = 1.0;
+                    cam.x = 0.0;
+                    cam.y = 0.0;
+                }
+
+                let speed = 5.0;
+                if key == KeyCode::A {
+                    cam.x -= speed;
+                }
+                if key == KeyCode::D {
+                    cam.x += speed;
+                }
+                if key == KeyCode::S {
+                    cam.y += speed;
+                }
+                if key == KeyCode::W {
+                    cam.y -= speed;
+                }
+            } //end camera controlls
+
+            let (entities, mut facings, mut int_moves, players): (
+                Entities,
+                WriteStorage<Facing>,
+                WriteStorage<IntentToMove>,
+                ReadStorage<Player>,
+            ) = self.entity_manager.system_data();
+
+            if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
+                for (e, _p) in (&entities, &players).join() {
+                    int_moves.remove(e);
+                }
+            } else {
+                for key in keycodes.iter().cloned() {
+                    match key {
+                        KeyCode::Right => {
+                            for (e, _p) in (&entities, &players).join() {
+                                facings
+                                    .insert(
+                                        e,
+                                        Facing {
+                                            direction: Direction::Right,
+                                        },
+                                    )
+                                    .expect("Player facing right");
+                                int_moves
+                                    .insert(e, IntentToMove)
+                                    .expect("Player intent to move right");
+                            }
+                        }
+                        KeyCode::Left => {
+                            for (e, _p) in (&entities, &players).join() {
+                                facings
+                                    .insert(
+                                        e,
+                                        Facing {
+                                            direction: Direction::Left,
+                                        },
+                                    )
+                                    .expect("Player facing left");
+                                int_moves
+                                    .insert(e, IntentToMove)
+                                    .expect("Player intent to move left");
+                            }
+                        }
+                        _ => {}
+                    }
                 }
             }
         }
-        
-    }
         Ok(())
     }
 
