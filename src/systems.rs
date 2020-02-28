@@ -45,14 +45,14 @@ impl<'a> System<'a> for MeshRenderSystem<'a> {
 pub struct MoveSystem;
 impl<'a> System<'a> for MoveSystem {
     type SystemData = (
-        Read<'a, DeltaTime>,
+        // Read<'a, DeltaTime>,
         ReadStorage<'a, Facing>,
         ReadStorage<'a, IntentToMove>,
         WriteStorage<'a, Renderable<Mesh>>,
     );
 
-    fn run(&mut self, (dt, facings, intentions, mut renderables): Self::SystemData) {
-        use std::ops::Deref;
+    fn run(&mut self, (facings, intentions, mut renderables): Self::SystemData) {
+        // use std::ops::Deref;
         for (facing, _move_int, ren) in (&facings, &intentions, &mut renderables).join() {
             if facing.direction == Direction::Right {
                 // ren.pos.x += 250.0 * dt.deref();
