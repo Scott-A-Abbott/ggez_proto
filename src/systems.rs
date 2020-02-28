@@ -55,10 +55,10 @@ impl<'a> System<'a> for MoveSystem {
         use std::ops::Deref;
         for (facing, _move_int, ren) in (&facings, &intentions, &mut renderables).join() {
             if facing.direction == Direction::Right {
-                ren.pos.x += 150. * dt.deref();
+                ren.pos.x += 150.0 * dt.deref();
             }
             if facing.direction == Direction::Left {
-                ren.pos.x -= 150. * dt.deref();
+                ren.pos.x -= 150.0 * dt.deref();
             }
         }
     }

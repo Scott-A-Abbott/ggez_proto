@@ -105,7 +105,6 @@ impl std::ops::Mul<&DeltaTime> for f32 {
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
-        let speed = 5.0;
         
         const DESIRED_FPS: u32 = 60;
         while timer::check_update_time(ctx, DESIRED_FPS) {
@@ -120,22 +119,26 @@ impl EventHandler for Game {
             let mut cam = self.entity_manager.write_resource::<Camera>();
             //unofficial camera controlls for testing:
             for key in keycodes.iter().cloned() {
+            
+            let scale_by = 1.01;
+            let max_clamp = 2.5;
+            let min_clamp = 0.25;
             if key == KeyCode::Equals {
-                cam.scale.x *= 1.01;
-                cam.scale.y *= 1.01;
+                cam.scale.x *= scale_by;
+                cam.scale.y *= scale_by;
 
-                if cam.scale.x > 2.5 {
-                    cam.scale.x = 2.5;
-                    cam.scale.y = 2.5;
+                if cam.scale.x > max_clamp {
+                    cam.scale.x = max_clamp;
+                    cam.scale.y = max_clamp;
                 }
             }
             if key == KeyCode::Minus {
-                cam.scale.x /= 1.01;
-                cam.scale.y /= 1.01;
+                cam.scale.x /= scale_by;
+                cam.scale.y /= scale_by;
 
-                if cam.scale.x < 0.25 {
-                    cam.scale.x = 0.25;
-                    cam.scale.y = 0.25;
+                if cam.scale.x < min_clamp {
+                    cam.scale.x = min_clamp;
+                    cam.scale.y = min_clamp;
                 }
             }
             if key == KeyCode::Key0 {
@@ -144,6 +147,8 @@ impl EventHandler for Game {
                 cam.x = 0.0;
                 cam.y = 0.0;
             }
+
+            let speed = 5.0;
             if key == KeyCode::A {
                 cam.x -= speed;
             }
