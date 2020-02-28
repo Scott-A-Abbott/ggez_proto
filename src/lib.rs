@@ -110,8 +110,8 @@ impl EventHandler for Game {
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let keycodes = ggez::input::keyboard::pressed_keys(ctx);
             
-            let delta_time = 1.0 / DESIRED_FPS as f32;
-            self.entity_manager.insert(DeltaTime(delta_time));
+            // let delta_time = 1.0 / DESIRED_FPS as f32;
+            // self.entity_manager.insert(DeltaTime(delta_time));
 
             let mut move_system = MoveSystem;
             move_system.run_now(&self.entity_manager);
