@@ -5,94 +5,143 @@ pub use self::camera::Camera;
 mod systems;
 use systems::*;
 
-use ggez::{event::*, graphics, graphics::Mesh, Context, GameResult};
-use specs::*;
+use ggez::{event::*, graphics, graphics::{Mesh, Text}, timer, Context, GameResult};
+use specs::{Builder, Entities, Join, ReadStorage, RunNow, WorldExt, WriteStorage};
 use std::collections::*;
-use std::iter::FromIterator;
 
 pub struct Game {
-    world: World,
+    entity_manager: specs::World,
 }
 
 impl Game {
     pub fn new(ctx: &mut ggez::Context) -> GameResult<Game> {
-        let mut world = World::new();
+        let mut entity_manager = specs::World::new();
 
-        world.register::<Renderable<Mesh>>();
-        world.register::<Doors>();
-        world.register::<Camera>();
-        world.register::<Player>();
-        world.register::<SpecialRoom>();
-        world.register::<IntentToMove>();
-        world.register::<Facing>();
+        entity_manager.register::<Renderable<Mesh>>();
+        entity_manager.register::<Doors>();
+        entity_manager.register::<Camera>();
+        entity_manager.register::<Player>();
+        entity_manager.register::<SpecialRoom>();
+        entity_manager.register::<IntentToMove>();
+        entity_manager.register::<Facing>();
+        entity_manager.register::<Size>();
 
         let screen = graphics::screen_coordinates(ctx);
         let camera = Camera::new(0.0, 0.0, screen.w, screen.h, 1.0);
 
-        let _main_cam = world
+        let _main_cam = entity_manager
             .create_entity()
             .with(Camera::clone_from(&camera))
             .build();
 
-        let next_room = world.create_entity().build();
+        let next_room = entity_manager.create_entity().build();
         let mut doors = HashMap::new();
-        doors.insert(DoorType::Right, Door{ to_room: next_room, pos: Position::new(0.0, screen.w - 50.0) });
-        let _start_room = world
+        doors.insert(
+            DoorType::Right,
+            Door {
+                to_room: next_room,
+                pos: Position::new(0.0, screen.w - 50.0),
+            },
+        );
+        let (stw, sth) = (screen.w * 2.0, screen.h - 40.0);
+        let _start_room = entity_manager
             .create_entity()
+            .with(Size::new(stw, sth))
             .with(Renderable {
                 drawable: graphics::MeshBuilder::new()
                     .rectangle(
                         graphics::DrawMode::fill(),
-                        graphics::Rect::new(0.0, 0.0, screen.w * 2.0, screen.h),
+                        graphics::Rect::new(0.0, 0.0, stw, sth),
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(0.0, 0.0),
+                pos: Position::new(screen.w/2.0 + 20.0, 0.0),
             })
             //doors should probably be a seperate entity
             .with(Doors(doors))
             .build();
 
-        let _player = world
+        let (pw, ph) = (30.0, 30.0);
+        let _player = entity_manager
             .create_entity()
             .with(Player)
+            .with(Size::new(pw, ph))
             .with(Renderable {
                 drawable: graphics::MeshBuilder::new()
                     .rectangle(
                         graphics::DrawMode::fill(),
-                        graphics::Rect::new(0.0, 0.0, 30.0, 30.0),
+                        graphics::Rect::new(0.0, 0.0, pw, ph),
                         graphics::Color::new(0.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
+                // pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
+                pos: Position::new(0.0, 0.0),
             })
             .with(Facing {
                 direction: Direction::Right,
             })
             .build();
 
-        world.insert(camera);
-        Ok(Self { world })
+        entity_manager.insert(camera);
+        Ok(Self { entity_manager })
     }
 }
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        self.world.maintain();
+        self.entity_manager.maintain();
         let mut move_system = MoveSystem;
-        move_system.run_now(&self.world);
+        move_system.run_now(&self.entity_manager);
 
-        // let mut cam = self.world.write_resource::<Camera>();
-        // let speed = 5.;
+        let mut cam = self.entity_manager.write_resource::<Camera>();
+        let speed = 5.0;
 
         let keycodes = ggez::input::keyboard::pressed_keys(ctx);
+        for key in keycodes.iter().cloned() {
+            if key == KeyCode::Equals {
+                cam.scale.x *= 1.01;
+                cam.scale.y *= 1.01;
+
+                if cam.scale.x > 2.5 {
+                    cam.scale.x = 2.5;
+                    cam.scale.y = 2.5;
+                }
+            }
+            if key == KeyCode::Minus {
+                cam.scale.x /= 1.01;
+                cam.scale.y /= 1.01;
+
+                if cam.scale.x < 0.25 {
+                    cam.scale.x = 0.25;
+                    cam.scale.y = 0.25;
+                }
+            }
+            if key == KeyCode::Key0 {
+                cam.scale.x = 1.0;
+                cam.scale.y = 1.0;
+                cam.x = 0.0;
+                cam.y = 0.0;
+            }
+            if key == KeyCode::A {
+                cam.x -= speed;
+            }
+            if key == KeyCode::D {
+                cam.x += speed;
+            }
+            if key == KeyCode::S {
+                cam.y += speed;
+            }
+            if key == KeyCode::W {
+                cam.y -= speed;
+            }
+        }
 
         let (entities, mut facings, mut int_moves, players): (
             Entities,
             WriteStorage<Facing>,
             WriteStorage<IntentToMove>,
             ReadStorage<Player>,
-        ) = self.world.system_data();
+        ) = self.entity_manager.system_data();
 
         if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
             for (e, _p) in (&entities, &players).join() {
@@ -100,24 +149,6 @@ impl EventHandler for Game {
             }
         } else {
             for key in keycodes.iter().cloned() {
-                //     if key == KeyCode::Equals {
-                //         cam.scale.x *= 1.01;
-                //         cam.scale.y *= 1.01;
-
-                //         if cam.scale.x > 2.5 {
-                //             cam.scale.x = 2.5;
-                //             cam.scale.y = 2.5;
-                //         }
-                //     }
-                //     if key == KeyCode::Minus {
-                //         cam.scale.x /= 1.01;
-                //         cam.scale.y /= 1.01;
-
-                //         if cam.scale.x < 0.25 {
-                //             cam.scale.x = 0.25;
-                //             cam.scale.y = 0.25;
-                //         }
-                //     }
                 match key {
                     KeyCode::Right => {
                         for (e, _p) in (&entities, &players).join() {
@@ -161,7 +192,16 @@ impl EventHandler for Game {
         graphics::clear(ctx, graphics::WHITE);
 
         let mut render_system = MeshRenderSystem::new(ctx);
-        render_system.run_now(&self.world);
+        render_system.run_now(&self.entity_manager);
+
+        let fps = timer::fps(ctx);
+        let fps_display = Text::new(format!("FPS: {}", fps));
+        //When drawing through these calls, `DrawParam` will work as they are documented.
+        graphics::draw(
+            ctx,
+            &fps_display,
+            (Position::new(200.0, 0.0), graphics::WHITE),
+        )?;
 
         graphics::present(ctx)
     }
@@ -215,7 +255,7 @@ impl EventHandler for Game {
                 ReadStorage<Facing>,
                 WriteStorage<IntentToMove>,
                 ReadStorage<Player>,
-            ) = self.world.system_data();
+            ) = self.entity_manager.system_data();
 
             if keycode == KeyCode::Right {
                 for (e, f, _p) in (&entities, &facings, &players).join() {

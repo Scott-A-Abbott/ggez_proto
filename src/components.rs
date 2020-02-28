@@ -1,5 +1,5 @@
 use specs::*;
-use std::collections::*;
+use std::collections::HashMap;
 
 pub struct Door {
     pub to_room: Entity,
@@ -12,7 +12,7 @@ pub enum DoorType {
     Left,
     Middle,
     Top,
-    Bottom
+    Bottom,
 }
 
 #[derive(Component)]
@@ -64,6 +64,17 @@ where
 {
     pub drawable: D,
     pub pos: Position,
+}
+
+#[derive(Component)]
+pub struct Size {
+    pub width: f32,
+    pub height: f32,
+}
+impl Size {
+    pub fn new(width: f32, height: f32) -> Self {
+        Self { width, height }
+    }
 }
 
 pub enum RoomType {
