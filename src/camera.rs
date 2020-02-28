@@ -1,6 +1,6 @@
 use ggez::graphics::Rect;
 use ggez::mint::Vector2;
-use specs::*;
+use specs::{Component, DenseVecStorage};
 
 #[derive(Component)]
 pub struct Camera {

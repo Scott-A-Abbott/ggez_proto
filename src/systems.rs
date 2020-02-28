@@ -1,6 +1,7 @@
-use super::*;
+use super::{components::*, Camera};
 use ggez::Context;
-use specs::{Join, Read, ReadStorage, System};
+use ggez::graphics::{self, Mesh};
+use specs::{Read, ReadStorage, System, WriteStorage, Join};
 
 pub struct MeshRenderSystem<'a> {
     ctx: &'a mut Context,

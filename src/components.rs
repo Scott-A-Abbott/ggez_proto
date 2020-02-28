@@ -1,4 +1,4 @@
-use specs::*;
+use specs::{Component, Entity, DenseVecStorage};
 use std::collections::HashMap;
 
 pub struct Door {
