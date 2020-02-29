@@ -59,7 +59,7 @@ impl Game {
                     )
                     .build(ctx)?,
                 cur_pos: Position::new(screen.w / 2.0 + 20.0, 0.0),
-                prev_pos: None
+                prev_pos: None,
             })
             //doors should probably be a seperate entity
             .with(Doors(doors))
@@ -80,7 +80,7 @@ impl Game {
                     .build(ctx)?,
                 // pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
                 cur_pos: Position::new(0.0, 0.0),
-                prev_pos: None
+                prev_pos: None,
             })
             .with(Facing {
                 direction: Direction::Right,
@@ -111,7 +111,7 @@ impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
 
-        const DESIRED_FPS: u32 = 60;
+        const DESIRED_FPS: u32 = 73;
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let keycodes = ggez::input::keyboard::pressed_keys(ctx);
 
@@ -226,7 +226,7 @@ impl EventHandler for Game {
         graphics::clear(ctx, graphics::BLACK);
 
         let tr = timer::remaining_update_time(ctx);
-        let dt: f64 = 1.0 / 60.0;
+        let dt: f64 = 1.0 / 73.0;
         let alpha = timer::duration_to_f64(tr) / dt;
         let mut render_system = MeshRenderSystem::new(ctx, alpha);
         render_system.run_now(&self.entity_manager);

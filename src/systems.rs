@@ -5,7 +5,7 @@ use specs::{Join, Read, ReadStorage, System, WriteStorage};
 
 pub struct MeshRenderSystem<'a> {
     ctx: &'a mut Context,
-    alpha: f64
+    alpha: f64,
 }
 impl<'a> MeshRenderSystem<'a> {
     pub fn new(ctx: &'a mut Context, alpha: f64) -> Self {
@@ -22,7 +22,6 @@ impl<'a> System<'a> for MeshRenderSystem<'a> {
 
     fn run(&mut self, (cam, renderables, sizes): Self::SystemData) {
         for (ren, size) in (&renderables, &sizes).join() {
-
             let (mut pos_x, mut pos_y) = (ren.cur_pos.x as f64, ren.cur_pos.y as f64);
 
             if let Some(prev_pos) = ren.prev_pos {
@@ -49,7 +48,7 @@ impl<'a> System<'a> for MeshRenderSystem<'a> {
                 &ren.drawable,
                 graphics::DrawParam::default()
                     .dest(Position::new(x, y))
-                    .scale(cam.scale)
+                    .scale(cam.scale),
             )
             .expect("Drawing a renderable");
         }
@@ -86,12 +85,12 @@ pub struct StopMovingSystem;
 impl<'a> System<'a> for StopMovingSystem {
     type SystemData = (
         WriteStorage<'a, Renderable<Mesh>>,
-        ReadStorage<'a, IntentToMove>
+        ReadStorage<'a, IntentToMove>,
     );
 
     fn run(&mut self, (mut renderables, int_moves): Self::SystemData) {
         for (ren, im) in (&mut renderables, (&int_moves).maybe()).join() {
-            if im.is_none(){
+            if im.is_none() && ren.prev_pos.is_some() {
                 ren.prev_pos = None;
             }
         }
