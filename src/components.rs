@@ -34,6 +34,7 @@ pub struct IntentToMove;
 #[derive(Component)]
 pub struct Player;
 
+#[derive(Copy, Clone, Debug)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -63,7 +64,8 @@ where
     D: ggez::graphics::Drawable + Send + Sync + 'static,
 {
     pub drawable: D,
-    pub pos: Position,
+    pub cur_pos: Position,
+    pub prev_pos: Option<Position>,
 }
 
 #[derive(Component)]

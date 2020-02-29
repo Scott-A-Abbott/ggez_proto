@@ -58,7 +58,8 @@ impl Game {
                         graphics::Color::new(1.0, 0.0, 0.0, 1.0),
                     )
                     .build(ctx)?,
-                pos: Position::new(screen.w / 2.0 + 20.0, 0.0),
+                cur_pos: Position::new(screen.w / 2.0 + 20.0, 0.0),
+                prev_pos: None
             })
             //doors should probably be a seperate entity
             .with(Doors(doors))
@@ -78,7 +79,8 @@ impl Game {
                     )
                     .build(ctx)?,
                 // pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
-                pos: Position::new(0.0, 0.0),
+                cur_pos: Position::new(0.0, 0.0),
+                prev_pos: None
             })
             .with(Facing {
                 direction: Direction::Right,
@@ -109,7 +111,7 @@ impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
 
-        const DESIRED_FPS: u32 = 60;
+        const DESIRED_FPS: u32 = 73;
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let keycodes = ggez::input::keyboard::pressed_keys(ctx);
 
@@ -220,19 +222,21 @@ impl EventHandler for Game {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::BLACK);
 
-        let mut render_system = MeshRenderSystem::new(ctx);
+        let alpha = timer::remaining_update_time(ctx);
+        let mut render_system = MeshRenderSystem::new(ctx, timer::duration_to_f64(alpha));
         render_system.run_now(&self.entity_manager);
 
         let fps = timer::fps(ctx);
         let fps_display = Text::new(format!("FPS: {}", fps));
-        //When drawing through these calls, `DrawParam` will work as they are documented.
         graphics::draw(
             ctx,
             &fps_display,
             (Position::new(50.0, 0.0), graphics::WHITE),
         )?;
 
-        graphics::present(ctx)
+        graphics::present(ctx)?;
+        timer::yield_now();
+        Ok(())
     }
 
     fn mouse_button_down_event(
