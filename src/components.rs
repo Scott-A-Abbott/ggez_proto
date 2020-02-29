@@ -34,7 +34,7 @@ pub struct IntentToMove;
 #[derive(Component)]
 pub struct Player;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Position {
     pub x: f32,
     pub y: f32,

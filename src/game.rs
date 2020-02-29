@@ -1,6 +1,6 @@
 use super::{
     components::*,
-    systems::{MeshRenderSystem, MoveSystem},
+    systems::{MeshRenderSystem, MoveSystem, StopMovingSystem},
     Camera,
 };
 use ggez::{
@@ -111,7 +111,7 @@ impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         self.entity_manager.maintain();
 
-        const DESIRED_FPS: u32 = 73;
+        const DESIRED_FPS: u32 = 60;
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let keycodes = ggez::input::keyboard::pressed_keys(ctx);
 
@@ -120,6 +120,9 @@ impl EventHandler for Game {
 
             let mut move_system = MoveSystem;
             move_system.run_now(&self.entity_manager);
+
+            let mut stop_system = StopMovingSystem;
+            stop_system.run_now(&self.entity_manager);
 
             let mut cam = self.entity_manager.write_resource::<Camera>();
             //unofficial camera controlls for testing:
@@ -222,8 +225,10 @@ impl EventHandler for Game {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, graphics::BLACK);
 
-        let alpha = timer::remaining_update_time(ctx);
-        let mut render_system = MeshRenderSystem::new(ctx, timer::duration_to_f64(alpha));
+        let tr = timer::remaining_update_time(ctx);
+        let dt: f64 = 1.0 / 60.0;
+        let alpha = timer::duration_to_f64(tr) / dt;
+        let mut render_system = MeshRenderSystem::new(ctx, alpha);
         render_system.run_now(&self.entity_manager);
 
         let fps = timer::fps(ctx);
