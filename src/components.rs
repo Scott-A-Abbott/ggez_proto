@@ -1,5 +1,5 @@
 use specs::{Component, DenseVecStorage, Entity};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Door {
     pub to_room: Entity,
@@ -18,10 +18,12 @@ pub enum DoorType {
 #[derive(Component)]
 pub struct Doors(pub HashMap<DoorType, Door>);
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub enum Direction {
     Right,
     Left,
+    Up,
+    Down,
 }
 #[derive(Component)]
 pub struct Facing {
@@ -29,7 +31,7 @@ pub struct Facing {
 }
 
 #[derive(Component)]
-pub struct IntentToMove;
+pub struct IntentToMove(pub HashSet<Direction>);
 
 #[derive(Component)]
 pub struct Player;

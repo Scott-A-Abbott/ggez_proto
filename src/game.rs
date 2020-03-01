@@ -9,11 +9,15 @@ use ggez::{
     graphics::{Mesh, Text},
     timer, Context, GameResult,
 };
-use specs::{Builder, Entities, Join, ReadStorage, RunNow, WorldExt, WriteStorage};
-use std::collections::HashMap;
+use specs::{Entity, Builder, Entities, Join, ReadStorage, RunNow, WorldExt, WriteStorage};
+use std::{
+    iter::FromIterator,
+    collections::{HashMap, HashSet},
+};
 
 pub struct Game {
     entity_manager: specs::World,
+    main_cam: Entity,
 }
 
 impl Game {
@@ -30,11 +34,11 @@ impl Game {
         entity_manager.register::<Size>();
 
         let screen = graphics::screen_coordinates(ctx);
-        let camera = Camera::new(0.0, 0.0, screen.w, screen.h, 1.0);
+        let camera = Camera::new(Position::new(0.0, 0.0), screen.w, screen.h, 1.0);
 
-        let _main_cam = entity_manager
+        let main_cam = entity_manager
             .create_entity()
-            .with(Camera::clone_from(&camera))
+            .with(camera)
             .build();
 
         let next_room = entity_manager.create_entity().build();
@@ -87,8 +91,7 @@ impl Game {
             })
             .build();
 
-        entity_manager.insert(camera);
-        Ok(Self { entity_manager })
+        Ok(Self { entity_manager, main_cam })
     }
 }
 
@@ -121,61 +124,59 @@ impl EventHandler for Game {
             let mut move_system = MoveSystem;
             move_system.run_now(&self.entity_manager);
 
+            let mut move_cam_system = super::systems::MoveCamSystem;
+            move_cam_system.run_now(&self.entity_manager);
+
             let mut stop_system = StopMovingSystem;
             stop_system.run_now(&self.entity_manager);
 
-            let mut cam = self.entity_manager.write_resource::<Camera>();
+            let (entities, mut facings, players, mut int_moves, mut cams): (
+                Entities,
+                WriteStorage<Facing>,
+                ReadStorage<Player>,
+                WriteStorage<IntentToMove>,
+                WriteStorage<Camera>,
+            ) = self.entity_manager.system_data();
+            let mut cam = cams.get_mut(self.main_cam).unwrap();
             //unofficial camera controlls for testing:
+
+            fn add_move_dir_for_cam(dir: Direction, int_moves: &mut WriteStorage<IntentToMove>, main_cam: Entity) {
+                if int_moves.contains(main_cam) {
+                    let IntentToMove(moves) = int_moves.get(main_cam).unwrap();
+                    let mut new_moves = HashSet::new();
+                    for m in moves {
+                        new_moves.insert(*m);
+                    }
+                    new_moves.insert(dir);
+                    int_moves.insert(main_cam, IntentToMove(new_moves))
+                        .expect("Could not replace IntentToMove for main_cam");
+                } else {
+                    int_moves.insert(main_cam, IntentToMove(HashSet::from_iter(vec![dir])))
+                        .expect("Could not insert IntentToMove for main_cam");
+                }
+            }
             for key in keycodes.iter().cloned() {
-                let scale_by = 1.01;
-                let max_clamp = 2.5;
-                let min_clamp = 0.25;
-                if key == KeyCode::Equals {
-                    cam.scale.x *= scale_by;
-                    cam.scale.y *= scale_by;
-
-                    if cam.scale.x > max_clamp {
-                        cam.scale.x = max_clamp;
-                        cam.scale.y = max_clamp;
-                    }
-                }
-                if key == KeyCode::Minus {
-                    cam.scale.x /= scale_by;
-                    cam.scale.y /= scale_by;
-
-                    if cam.scale.x < min_clamp {
-                        cam.scale.x = min_clamp;
-                        cam.scale.y = min_clamp;
-                    }
-                }
                 if key == KeyCode::Key0 {
-                    cam.scale.x = 1.0;
-                    cam.scale.y = 1.0;
-                    cam.x = 0.0;
-                    cam.y = 0.0;
+                    cam.cur_scale.x = 1.0;
+                    cam.cur_scale.y = 1.0;
+                    cam.cur_pos.x = 0.0;
+                    cam.cur_pos.y = 0.0;
                 }
 
-                let speed = 5.0;
-                if key == KeyCode::A {
-                    cam.x -= speed;
-                }
-                if key == KeyCode::D {
-                    cam.x += speed;
-                }
-                if key == KeyCode::S {
-                    cam.y += speed;
-                }
-                if key == KeyCode::W {
-                    cam.y -= speed;
+                match key {
+                    KeyCode::A => add_move_dir_for_cam(Direction::Left, &mut int_moves, self.main_cam),
+                    KeyCode::D => add_move_dir_for_cam(Direction::Right, &mut int_moves, self.main_cam),
+                    KeyCode::S => add_move_dir_for_cam(Direction::Down, &mut int_moves, self.main_cam),
+                    KeyCode::W => add_move_dir_for_cam(Direction::Up, &mut int_moves, self.main_cam),
+                    _ => {}
                 }
             } //end camera controlls
 
-            let (entities, mut facings, mut int_moves, players): (
-                Entities,
-                WriteStorage<Facing>,
-                WriteStorage<IntentToMove>,
-                ReadStorage<Player>,
-            ) = self.entity_manager.system_data();
+            if !keycodes.contains(&KeyCode::A) && !keycodes.contains(&KeyCode::D)
+            && !keycodes.contains(&KeyCode::S) && !keycodes.contains(&KeyCode::W) {
+                int_moves.remove(self.main_cam);
+                cam.prev_pos = None;
+            }
 
             if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
                 for (e, _p) in (&entities, &players).join() {
@@ -195,7 +196,7 @@ impl EventHandler for Game {
                                     )
                                     .expect("Player facing right");
                                 int_moves
-                                    .insert(e, IntentToMove)
+                                    .insert(e, IntentToMove(HashSet::from_iter(vec![Direction::Right])))
                                     .expect("Player intent to move right");
                             }
                         }
@@ -210,7 +211,7 @@ impl EventHandler for Game {
                                     )
                                     .expect("Player facing left");
                                 int_moves
-                                    .insert(e, IntentToMove)
+                                    .insert(e, IntentToMove(HashSet::from_iter(vec![Direction::Left])))
                                     .expect("Player intent to move left");
                             }
                         }
@@ -228,7 +229,7 @@ impl EventHandler for Game {
         let tr = timer::remaining_update_time(ctx);
         let dt: f64 = 1.0 / 73.0;
         let alpha = timer::duration_to_f64(tr) / dt;
-        let mut render_system = MeshRenderSystem::new(ctx, alpha);
+        let mut render_system = MeshRenderSystem::new(ctx, alpha, self.main_cam);
         render_system.run_now(&self.entity_manager);
 
         let fps = timer::fps(ctx);
@@ -307,6 +308,25 @@ impl EventHandler for Game {
                     if int_move.contains(e) && f.direction == Direction::Left {
                         int_move.remove(e);
                     }
+                }
+            }
+        }
+
+        if keycode == KeyCode::A || keycode == KeyCode::W || keycode == KeyCode::S || keycode == KeyCode::D {
+            let (mut int_move, cams): (WriteStorage<IntentToMove>, ReadStorage<Camera>) = self.entity_manager.system_data();
+            for (im, _c) in (&mut int_move, &cams).join() {
+                let IntentToMove(moves) = im;
+                if keycode == KeyCode::A {
+                    moves.remove(&Direction::Left);
+                }
+                if keycode == KeyCode::D {
+                    moves.remove(&Direction::Right);
+                }
+                if keycode == KeyCode::W {
+                    moves.remove(&Direction::Up);
+                }
+                if keycode == KeyCode::S {
+                    moves.remove(&Direction::Down);
                 }
             }
         }
