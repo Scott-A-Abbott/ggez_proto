@@ -1,7 +1,7 @@
+use super::Position;
 use ggez::graphics::Rect;
 use ggez::mint::Vector2;
 use specs::{Component, DenseVecStorage};
-use super::Position;
 
 #[derive(Component)]
 pub struct Camera {

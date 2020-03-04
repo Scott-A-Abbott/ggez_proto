@@ -43,7 +43,7 @@ impl<'a> System<'a> for MeshRenderSystem<'a> {
                 let cur_ay = cam_y * self.alpha;
                 let prev_ax = cam_prev_pos.x as f64 * (1.0 - self.alpha);
                 let prev_ay = cam_prev_pos.y as f64 * (1.0 - self.alpha);
-                
+
                 cam_x = cur_ax + prev_ax;
                 cam_y = cur_ay + prev_ay;
             }
@@ -113,10 +113,7 @@ impl<'a> System<'a> for StopMovingSystem {
 
 pub struct MoveCamSystem;
 impl<'a> System<'a> for MoveCamSystem {
-    type SystemData = (
-        WriteStorage<'a, Camera>,
-        ReadStorage<'a, IntentToMove>
-    );
+    type SystemData = (WriteStorage<'a, Camera>, ReadStorage<'a, IntentToMove>);
 
     fn run(&mut self, (mut cams, int_moves): Self::SystemData) {
         const SPEED: f32 = 5.0;
