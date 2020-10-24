@@ -1,3 +1,4 @@
+use ggez::graphics::Drawable;
 use specs::{Component, DenseVecStorage, Entity};
 use std::collections::{HashMap, HashSet};
 
@@ -63,11 +64,12 @@ impl From<Position> for ggez::mint::Point2<f32> {
 #[derive(Component)]
 pub struct Renderable<D>
 where
-    D: ggez::graphics::Drawable + Send + Sync + 'static,
+    D: Drawable + Send + Sync + 'static,
 {
     pub drawable: D,
     pub cur_pos: Position,
     pub prev_pos: Option<Position>,
+    pub draw_param: Option<ggez::graphics::DrawParam>,
 }
 
 #[derive(Component)]

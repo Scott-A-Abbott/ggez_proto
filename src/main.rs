@@ -8,8 +8,9 @@ use std::{env, path};
 fn main() -> GameResult {
     let conf = Conf {
         window_mode: WindowMode {
-            width: 1920.0,
-            height: 1080.0,
+            width: 1440.0,
+            height: 810.0,
+            resizable: true,
             ..WindowMode::default()
         },
         window_setup: WindowSetup {

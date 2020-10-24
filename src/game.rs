@@ -1,6 +1,6 @@
 use super::{
     components::*,
-    systems::{MeshRenderSystem, MoveSystem, StopMovingSystem},
+    systems::{MoveSystem, RenderSystem, StopMovingSystem},
     Camera,
 };
 use ggez::{
@@ -18,6 +18,7 @@ use std::{
 pub struct Game {
     entity_manager: specs::World,
     main_cam: Entity,
+    player: Entity,
 }
 
 impl Game {
@@ -57,32 +58,38 @@ impl Game {
                     .rectangle(
                         graphics::DrawMode::fill(),
                         graphics::Rect::new(0.0, 0.0, stw, sth),
-                        graphics::Color::new(1.0, 0.0, 0.0, 1.0),
+                        graphics::Color::new(0.0, 0.0, 1.0, 1.0),
                     )
                     .build(ctx)?,
                 cur_pos: Position::new(screen.w / 2.0 + 20.0, 0.0),
                 prev_pos: None,
+                draw_param: None,
             })
             //doors should probably be a seperate entity
             .with(Doors(doors))
             .build();
 
-        let (pw, ph) = (30.0, 30.0);
-        let _player = entity_manager
+        let (pw, ph) = (300.0, 400.0);
+        let player = entity_manager
             .create_entity()
             .with(Player)
             .with(Size::new(pw, ph))
             .with(Renderable {
-                drawable: graphics::MeshBuilder::new()
-                    .rectangle(
-                        graphics::DrawMode::fill(),
-                        graphics::Rect::new(0.0, 0.0, pw, ph),
-                        graphics::Color::new(0.0, 0.0, 0.0, 1.0),
-                    )
-                    .build(ctx)?,
+                drawable: graphics::Image::new(ctx, "/anim_tmp.png")?,
+
+                // drawable: graphics::MeshBuilder::new()
+                //     .rectangle(
+                //         graphics::DrawMode::fill(),
+                //         graphics::Rect::new(0.0, 0.0, pw, ph),
+                //         graphics::Color::new(0.0, 0.0, 0.0, 1.0),
+                //     )
+                //     .build(ctx)?,
                 // pos: Position::new(screen.w / 2.0 - 15.0, screen.h * 0.8 - 15.0),
                 cur_pos: Position::new(0.0, 0.0),
                 prev_pos: None,
+                draw_param: Some(
+                    graphics::DrawParam::new().src(graphics::Rect::new(0.0, 0.0, 0.5, 0.5)),
+                ),
             })
             .with(Facing {
                 direction: Direction::Right,
@@ -92,6 +99,7 @@ impl Game {
         Ok(Self {
             entity_manager,
             main_cam,
+            player,
         })
     }
 }
@@ -122,19 +130,23 @@ impl EventHandler for Game {
             // let delta_time = 1.0 / DESIRED_FPS as f32;
             // self.entity_manager.insert(DeltaTime(delta_time));
 
-            let mut move_system = MoveSystem;
-            move_system.run_now(&self.entity_manager);
+            let mut mv_mesh_sys = MoveSystem::<Mesh>::new();
+            mv_mesh_sys.run_now(&self.entity_manager);
+
+            let mut mv_img_sys = MoveSystem::<Image>::new();
+            mv_img_sys.run_now(&self.entity_manager);
 
             let mut move_cam_system = super::systems::MoveCamSystem;
             move_cam_system.run_now(&self.entity_manager);
 
-            let mut stop_system = StopMovingSystem;
-            stop_system.run_now(&self.entity_manager);
+            let mut stp_mesh_sys = StopMovingSystem::<Mesh>::new();
+            stp_mesh_sys.run_now(&self.entity_manager);
 
-            let (entities, mut facings, players, mut int_moves, mut cams): (
-                Entities,
+            let mut stp_img_sys = StopMovingSystem::<Image>::new();
+            stp_img_sys.run_now(&self.entity_manager);
+
+            let (mut facings, mut int_moves, mut cams): (
                 WriteStorage<Facing>,
-                ReadStorage<Player>,
                 WriteStorage<IntentToMove>,
                 WriteStorage<Camera>,
             ) = self.entity_manager.system_data();
@@ -197,47 +209,41 @@ impl EventHandler for Game {
             }
 
             if keycodes.contains(&KeyCode::Right) && keycodes.contains(&KeyCode::Left) {
-                for (e, _p) in (&entities, &players).join() {
-                    int_moves.remove(e);
-                }
+                int_moves.remove(self.player);
             } else {
                 for key in keycodes.iter().cloned() {
                     match key {
                         KeyCode::Right => {
-                            for (e, _p) in (&entities, &players).join() {
-                                facings
-                                    .insert(
-                                        e,
-                                        Facing {
-                                            direction: Direction::Right,
-                                        },
-                                    )
-                                    .expect("Player facing right");
-                                int_moves
-                                    .insert(
-                                        e,
-                                        IntentToMove(HashSet::from_iter(vec![Direction::Right])),
-                                    )
-                                    .expect("Player intent to move right");
-                            }
+                            facings
+                                .insert(
+                                    self.player,
+                                    Facing {
+                                        direction: Direction::Right,
+                                    },
+                                )
+                                .expect("Player facing right");
+                            int_moves
+                                .insert(
+                                    self.player,
+                                    IntentToMove(HashSet::from_iter(vec![Direction::Right])),
+                                )
+                                .expect("Player intent to move right");
                         }
                         KeyCode::Left => {
-                            for (e, _p) in (&entities, &players).join() {
-                                facings
-                                    .insert(
-                                        e,
-                                        Facing {
-                                            direction: Direction::Left,
-                                        },
-                                    )
-                                    .expect("Player facing left");
-                                int_moves
-                                    .insert(
-                                        e,
-                                        IntentToMove(HashSet::from_iter(vec![Direction::Left])),
-                                    )
-                                    .expect("Player intent to move left");
-                            }
+                            facings
+                                .insert(
+                                    self.player,
+                                    Facing {
+                                        direction: Direction::Left,
+                                    },
+                                )
+                                .expect("Player facing left");
+                            int_moves
+                                .insert(
+                                    self.player,
+                                    IntentToMove(HashSet::from_iter(vec![Direction::Left])),
+                                )
+                                .expect("Player intent to move left");
                         }
                         _ => {}
                     }
@@ -253,8 +259,14 @@ impl EventHandler for Game {
         let tr = timer::remaining_update_time(ctx);
         let dt: f64 = 1.0 / 73.0;
         let alpha = timer::duration_to_f64(tr) / dt;
-        let mut render_system = MeshRenderSystem::new(ctx, alpha, self.main_cam);
-        render_system.run_now(&self.entity_manager);
+        {
+            let mut mesh_render_system = RenderSystem::<Mesh>::new(ctx, alpha, self.main_cam);
+            mesh_render_system.run_now(&self.entity_manager);
+        }
+        {
+            let mut img_render_system = RenderSystem::<Image>::new(ctx, alpha, self.main_cam);
+            img_render_system.run_now(&self.entity_manager);
+        }
 
         let fps = timer::fps(ctx);
         let fps_display = Text::new(format!("FPS: {}", fps));
@@ -313,25 +325,18 @@ impl EventHandler for Game {
         }
 
         if keycode == KeyCode::Right || keycode == KeyCode::Left {
-            let (entities, facings, mut int_move, players): (
-                Entities,
-                ReadStorage<Facing>,
-                WriteStorage<IntentToMove>,
-                ReadStorage<Player>,
-            ) = self.entity_manager.system_data();
+            let (facings, mut int_move): (ReadStorage<Facing>, WriteStorage<IntentToMove>) =
+                self.entity_manager.system_data();
+            let f = facings.get(self.player).unwrap();
 
             if keycode == KeyCode::Right {
-                for (e, f, _p) in (&entities, &facings, &players).join() {
-                    if int_move.contains(e) && f.direction == Direction::Right {
-                        int_move.remove(e);
-                    }
+                if int_move.contains(self.player) && f.direction == Direction::Right {
+                    int_move.remove(self.player);
                 }
             }
             if keycode == KeyCode::Left {
-                for (e, f, _p) in (&entities, &facings, &players).join() {
-                    if int_move.contains(e) && f.direction == Direction::Left {
-                        int_move.remove(e);
-                    }
+                if int_move.contains(self.player) && f.direction == Direction::Left {
+                    int_move.remove(self.player);
                 }
             }
         }
